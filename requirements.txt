@@ -1,0 +1,9 @@
+wheel
+numpy
+sklearn
+pandas
+seaborn
+matplotlib
+hydra
+# dvc
+yellowbrick
