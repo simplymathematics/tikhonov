@@ -1,41 +1,75 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.datasets import make_blobs, make_moons
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification, make_blobs
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from autograd import grad
-import autograd.numpy as np
+import torch
+from torch.autograd import grad, jacobian
+from tqdm import tqdm
 
 from autograd import grad
 from tqdm import tqdm
 
+try:
+    torch.cuda.set_device(0)
+except:
+    raise
+
 class LinearTikhonovClassifier():
     def __init__(self, scale):
         self.scale=scale
+    
+    def predict(self, X, weights=None, bias=None):
+        if weights is None:
+            weights = self.coef_
+        if bias is None:
+            bias = self.intercept_
+        X_dot_weights = X @ weights + bias
+        return X_dot_weights
 
+    def _setup(self, X, y):
+        if not hasattr(self, "coef_"):
+            X = np.array(X)
+            y = np.array(y)
+            _, p = X.shape
+            self.coef_ = np.random.randn(p,1) * 1e-4
+            self.intercept_ = np.zeros(1)
+        return self
+    
+    def loss(self, X, y, weights, bias):
+        X = np.array(X)
+        y = np.array(y)
+        y_pred = self.predict(X, weights = weights, bias = bias)
+        loss = .5 * np.mean((y_pred - y) ** 2)
+        tikhonov_loss = self.tikhonov_loss(X, weights = weights, bias = bias)
+        return loss + self.scale * tikhonov_loss
 
+    def tikhonov_loss(self, x, weights, bias):
+        
+        grady_x = jacobian(self.predict, argnum = 0)(x, weights = weights, bias = bias)
+        reduced = grady_x.reshape(grady_x.shape[0], -1)
+        summed = np.sum(reduced ** 2, axis = 1)
+        return np.mean(summed)/2
+    
+    
+    def gradient(self, X, y, weights, bias):
+        X = np.array(X)
+        y = np.array(y)
+        result = grad(self.loss)(X, y, weights = weights, bias = bias)
+        return (np.mean(result[0]), np.mean(result[1]))
+    
     def fit(self, X, y, learning_rate = 1e-8, epochs = 1000, warm_start = False):
-        d = X.shape[1]
-        c = len(np.unique(y))
-        self.coef_ = np.random.random((c,d)) * 1e-8 if warm_start is False else self.coef_
-        self.intercept_ = np.zeros(1) * 1e-8 if warm_start is False else self.intercept_
+        self = self._setup(X, y)
         old_loss = 1e9
         L_w = self.coef_ * 0.0
         L_b = 0
         for i in tqdm(range(epochs), desc = f"Epochs: {epochs}. Learning Rate: {learning_rate}. Scale: {self.scale}. Warm Start: {warm_start}"):
             L_w, L_b = self.gradient(X, y, self.coef_, self.intercept_)
-            # print(L_w.shape)
-            # print(L_b.shape)
-            # input(f"Epoch {i+1} Loss: {self.loss(X, y, self.coef_, self.intercept_)}")
+            print(f"Epoch {i+1} Loss: {self.loss(X, y, self.coef_, self.intercept_)}")
             self.coef_ -= L_w * learning_rate
             self.intercept_ -= L_b * learning_rate
             y_pred = self.predict(X)
             new_loss = self.loss(X, y, self.coef_, self.intercept_)
-            # print(f"Epoch {i+1} Loss: {new_loss}")
             if new_loss > old_loss:
                 learning_rate /= 2
             old_loss = new_loss
@@ -44,34 +78,14 @@ class LinearTikhonovClassifier():
         print(f"Final Learning Rate: {learning_rate}")
         return self
 
-    def loss(self,  X, y, weights = None, bias = None):
-        
-        y_hat = weights @ X.T
-        y_hat = y_hat + bias
-        errors = np.subtract(y_hat, y)
-        squared = errors * errors
-        summed = np.sum(squared)
-        tikho = np.sum(weights * weights)
-        tikho /= 2
-        return np.mean(summed + self.scale * tikho)
-    
-    def gradient(self, x, y, weights, bias):
-        gradL_w = grad(self.loss, 2)(x, y, weights, bias)
-        gradL_b = grad(self.loss, 3)(x, y, weights, bias)
-        return (gradL_w, gradL_b)
-    
-    def predict(self, X):
-        X_dot_weights =  self.coef_ @ X.T + self.intercept_
-        # print(X_dot_weights.shape)
-        # print(np.argmax(X_dot_weights, axis = 0).shape)
-        # print(np.argmax(X_dot_weights, axis = 1).shape)
-        # print(np.sum(X_dot_weights, axis = 0).shape)
-        # print(X_dot_weights[0].shape)
-        # input("Inside predict")
-        return [1 if x > .5 else 0 for x in X_dot_weights[0]]
-
     def score(self, y_true, y_pred):
-        return accuracy_score(y_true, y_pred)
+        classes = []
+        for y in y_pred:
+            if y > .5:
+                classes.append(1)
+            else:
+                classes.append(0)
+        return accuracy_score(y_true, classes)
     
     
 
@@ -79,20 +93,16 @@ if __name__ == "__main__":
     samples = 10000
     X, y = make_classification(n_samples=samples, n_classes=2, n_features=10, n_informative=8, n_redundant=0, n_clusters_per_class=1, class_sep=10)
     # X, y = make_blobs(n_samples=10000, n_features=2, centers=2, cluster_std=1.0, random_state=40)
-    
     print(f"No. of Samples: {samples}")
     print(f"Classes: {np.unique(y)}")
     print(f"Largest Class: {np.bincount(y).max()}")
     print(f"Smallest Class: {np.bincount(y).min()}")
     print("Test Basic Functionality")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = LinearTikhonovClassifier(scale=1000.0)
-    model = model.fit(X_train, y_train, learning_rate=1e-8, epochs=1000)
-    predictions = model.predict(X_train)
-    # print(f"Predictions.shape: {predictions.shape}")
-    print(f"X_train.shape: {X_train.shape}")
-    print(f"y_train.shape: {y_train.shape}")
-    score = model.score(y_train, predictions)
+    model = LinearTikhonovClassifier(scale=0)
+    model = model.fit(X_train, y_train, learning_rate=1e-8, epochs=1)
+    y_pred = model.predict(X_test)
+    score = model.score(y_train, y_pred)
     loss = model.loss(X_train, y_train, model.coef_, model.intercept_)
     print(f"Score: {score}, Loss: {loss}")
-    print("#"*80)
+    # print("#"*80)
