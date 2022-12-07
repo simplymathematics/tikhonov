@@ -9,3 +9,4 @@ tqdm
 # dvc
 yellowbrick
 autograd
+torch
