@@ -42,7 +42,7 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
                 self.coef_ = w
                 self.intercept_ = b
             # Finding the loss.
-            l = self.loss(y, self.sigmoid(np.dot(x, w) + b))
+            l = self.loss(x, y, w, b)
             if l > old_loss:
                 lr = lr * .5
             else:
@@ -56,13 +56,14 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
     def sigmoid(self, z):
         return 1.0/(1 + np.exp(-z))
 
-    def loss(self, y:np.ndarray, y_hat:np.ndarray) -> float:
+    def loss(self,  X, y, weights, bias) -> float:
         """
         Calculate the loss.
         :param y: true/target value.
         :param y_hat: hypothesis/predictions.
         :return: loss.
         """
+        y_hat = self.sigmoid(np.dot(X, weights) + bias)
         loss_ = log_loss(y, y_hat, normalize = False)
         tikho = .5 * np.mean(np.sum(np.sum(np.divide(1, y_hat * (y_hat - 1)))))
         return loss_ + tikho * self.scale
@@ -139,6 +140,6 @@ if __name__ == "__main__":
     predictions = model.predict(X_test)
     probas = model.predict(X_test, proba = True)
     score = model.score(y_test, predictions)
-    loss = model.loss(y_test, probas)
-    print(f"Test Accuracy: {score}, Test Loss: {loss}")
+
+    print(f"Test Accuracy: {score}")
     

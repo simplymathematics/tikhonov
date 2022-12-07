@@ -16,11 +16,11 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 
 
-def run_tikho_experiment(model, X_train, X_test, y_train, y_test):
-    model = model.fit(X_train, y_train)
-    predictions = model.predict(X_train )
-    score = model.score(y_train, predictions)
-    loss = model.loss(X_train, y_train, model.coef_, model.intercept_)
+def run_tikho_experiment(model, X_train, X_test, y_train, y_test, epochs = 1000, learning_rate = 1e-8):
+    model = model.fit(X_train, y_train, learning_rate = learning_rate, epochs = epochs)
+    predictions = model.predict(X_test )
+    score = model.score(y_test, predictions)
+    loss = model.loss(X_test, y_test, model.coef_, model.intercept_)
     return score, loss
     
     
@@ -56,7 +56,9 @@ if "__main__" == __name__:
         raise ValueError(f"Unknown model: {args.model}")
 
 
-
+    score, loss = run_tikho_experiment(model, X_train, X_test, y_train, y_test, epochs = 100)
+    print(f"Score: {score}, Loss: {loss}")
+    input("Press Enter to continue...")
 
     print("Experiment 1: Tikhonov regularization")
     scale_scores = []

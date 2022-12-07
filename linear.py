@@ -44,7 +44,8 @@ class LinearTikhonovClassifier():
         print(f"Final Learning Rate: {learning_rate}")
         return self
 
-    def loss(self,  X, y, weights, bias):
+    def loss(self,  X, y, weights = None, bias = None):
+        
         y_hat = weights @ X.T
         y_hat = y_hat + bias
         errors = np.subtract(y_hat, y)
