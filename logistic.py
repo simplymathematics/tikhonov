@@ -65,8 +65,8 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
         """
         y_hat = self.sigmoid(np.dot(X, weights) + bias)
         loss_ = log_loss(y, y_hat, normalize = False)
-        tikho = .5 * np.mean(np.sum(np.sum(np.divide(1, y_hat * (y_hat - 1)))))
-        return loss_ + tikho * self.scale
+        tikho = .5 * np.sum(np.sum(np.divide(1, y_hat * (y_hat - 1))))
+        return np.mean(loss_ + tikho * self.scale)
 
     def gradient(self, x:np.ndarray, y:np.ndarray, weights:np.ndarray, bias:np.ndarray) -> tuple:
         """
