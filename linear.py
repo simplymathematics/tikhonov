@@ -16,9 +16,11 @@ class LinearTikhonovClassifier():
             weights = self.coef_
         if bias is None:
             bias = self.intercept_
-        print(f"Type of weights", type(weights))
+        
         print(f"Shape of weights", weights.shape)
-        print(f"Weight samples", weights[:5])
+        # print(f"Weight samples", weights[:5])
+        print(f"Type of weights", type(weights))
+        print(f"type of X", type(X))
         input("Press Enter to continue...")
         X_dot_weights = torch.matmul(X, weights) + bias
         return X_dot_weights
@@ -31,10 +33,10 @@ class LinearTikhonovClassifier():
             y = torch.tensor(y, dtype=torch.int32)
             y = y.to(device)
             _, p = X.shape
-            self.coef_ = torch.randn(p, 1, dtype=torch.float32)
-            self.coef_ = torch.tensor(self.coef_, dtype=torch.float32, device=device, requires_grad=True)
-            self.intercept_ = torch.zeros(1, dtype=torch.float32)
-            self.intercept_ = torch.tensor(self.intercept_, dtype=torch.float32, device=device, requires_grad=True)
+            w = torch.randn(p, 1, dtype=torch.float32)
+            self.coef_ = w.clone().detach().requires_grad_(True)
+            b = torch.zeros(1, dtype=torch.float32)
+            self.intercept_ = b.clone().detach().requires_grad_(True)
         return self
     
     def loss(self, X, y, weights, bias):
