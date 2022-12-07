@@ -4,6 +4,8 @@ sklearn
 pandas
 seaborn
 matplotlib
-hydra
+tqdm
+# hydra
 # dvc
 yellowbrick
+autograd

@@ -1,0 +1,180 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+
+
+\renewcommand{\v}[1]{\boldsymbol{#1}}
+\newcommand{\dep}{\,|\,}
+\newcommand{\T}{\mathrm{T}}
+
+\date{September 2022}
+
+
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+
+\begin{document}
+
+\title{Tikhonov Regularization and Adversarial Defense\\
+
+\thanks{Financial support has been provided in part by the Knut and Alice Wallenberg Foundation and by the eSSENCE Programme under the Swedish Government’s Strategic Research Initiative}
+}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Charles Meyers}
+\IEEEauthorblockA{\textit{dept. of Computing Science} \\
+\textit{Ume\aa~University}\\
+Ume\aa, Sweden \\
+cmeyers@cs.umu.se}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Tommy L\"ofstedt}
+\IEEEauthorblockA{\textit{dept. of Computing Science} \\
+\textit{Ume\aa~University}\\
+Ume\aa, Sweden \\
+tommy@cs.umu.se}
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Erik Elmroth}
+\IEEEauthorblockA{\textit{dept. of Computing Science} \\
+\textit{Ume\aa~University}\\
+Ume\aa, Sweden \\
+elmroth@cs.umu.se}
+}
+
+
+\maketitle
+
+
+\begin{abstract}
+    Modern neural network architectures have been shown to be quite weak to adversarial attacks, particularly in the case of high-dimensional datasets and models. For data streams like images and video, single-pixel, black-box, and fast varieties of attacks have already been demonstrated. While many defences have been proposed, they often rely on proxy models, ensemble methods, expensive dataset analysis, or multi-stage processes that involve generating adversarial examples and training against those new samples, real-time methods are less thouroghly explored. One such method involves training with Gaussian noise, which has shown to be effective at improving a model's ability to generalize beyond an `ideal' laboratory-collected dataset. In this paper, we expand prior theoretical understanding of an equivalent technique known as Tikhonov Regularization that includes a penalty term to recognize the scale of the model weights. Although prior work has explored this in relation to logistic and linear regression problems, we expand this to include multinomial regression and simple neural network architectures. We also demonstrate that this method works in practice..., it's run-time characteristics..., and how it performs against state-of-the-art adversarial noise.
+\end{abstract}
+
+
+\section{Introduction}
+% TODO: re-organize later. Will just annotate several sources here for now.
+Hadamard \cite{hadamard1902problemes} originally discussed the concept of well-posed problems in 1902, while exploring the problems with inverting Maxwell's heat equations. He defined a well-posed problem as one in which it i) has a solution ii) has a unique solution and iii) the outputs are continuously differentiable with respect to the inputs. In the context of modern neural networks (i) and (iii) are generally assumed to be true either in theory or practice. However, (ii) is typically not satisified given that modern techniques rely on massive datasets and overdetermined training processes. This makes regularization critical to separating mundane numerical coincidences from `true' object and finding the global  (\textit{i.e.} unique) solution.
+
+For sufficiently complex systems, like autonomous vehicles, the number of unforeseen but otherwise normal road conditions is far too large to account for with data-collection alone, particularly given the real-world rarity of such edge cases and dataset augmentation techniques run the risk of overfitting on noise-augmented datasets \cite{koopman2016challenges}. This problem is compounded further in the context of \textit{adversarial} noise \cite{adversarialpatch, madry2017towards, chakraborty2018adversarial, biggio_evasion_2013, biggio_poisoning_2013, croce_reliable_2020, dohmatob_generalized_2019, fredrikson_model_2015, hopskipjump, kotyan2022adversarial}, in which an attacker intentionally generates small perturbations in the data that cause large changes in the output, resulting in a misclassification while optimizing for things like perturbation distance, number of queries, or the requisite run-time of an attack. 
+
+Luckily, Tikhonov regularization is a robust and theoertically sound way to generalize a model under the assumption that the training data is noisy. Bishop et al. \cite{bishop1995training} showed that, in theory, this method words on both linear and logistic regression under relatively simple assumptions and that the regularization technique is nearly identical to training with noise. Golub et al. \cite{golub1999tikhonov} demonstrated that this method filters out noise along the vectors corresponding to the singular values of the input matrix, making it particularly effective for ill-posed problems (\textit{e.g.} overdetermined neural networks). They also demonstrated several methods for calculating the appropriate scaling factor for a given set of data. Further research \cite{zhao2011modified} proposed methods for calculating the error bounds for such a regularization method. A recent paper \cite{gerth2021new} reinterprets this method in the context of convergence properties, demonstrating an upper bound for the convergence rates of this Tikhonov process. Together, this provides a strong theoretical backdrop to exploit this as a defense against adversarial noise. 
+
+\section{Contributions}
+\begin{itemize}
+    \item We demonstrate that training with noise is equivalent to Tikhonov regularization. 
+    \item We derive the Tikhonov regularization equation for multinomial regression and cross-entropy loss. 
+    \item We demonstrate the efficacy of such a technique using synthetic data, linear regression, logistic regression, a simple neural network.
+    \item We calculate and verify the error bounds and convergence rate of such a model using an adversarial analysis.
+\end{itemize}
+
+\section{Tikhonov Regularization}
+
+\subsection{Training with Noise}
+
+\subsection{Tikhonov regularization}
+\paragraph{Linear Regression}
+\paragraph{Logistic Regression}
+\paragraph{Multinomial regression:}
+
+
+$$
+    E = -\int\int\sum_k t_{k} \log y_{k}(\v{x}) \, p(t_{kd} \dep \v{x})\, p(\v{x})\, d\v{x}\, dt_k
+$$
+$\widetilde{E} $ is defined as
+$$
+    -\int\int\int\sum_k t_{k} \log y_{k}(\v{x} + \v{\xi}) \, p(t_{kd} \dep \v{x})\, p(\v{x})\, d\v{x}\, dt_k\, d\v{\xi}
+$$
+
+We have
+$$
+    y_{k}(\v{x}) = \frac{e^{-z_k(\v{x})}}{\sum_k e^{-z_k(\v{x})}},
+$$
+with Taylor series expansion,
+$$
+    y_k(\v{x} + \v{\xi}) = y_k(\v{x})
+                             + \nabla_{\v{x}}y_k(\v{x})^\T\v{\xi}
+                             + \frac{1}{2}\v{\xi}^\T\nabla^2_{\v{x}}y_k(\v{x})\v{\xi}
+                             + \mathcal{O}(\v{\xi}^3).
+$$
+
+Problem: Each $y_k$ depends on all other $y_{\neq k}$.
+
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/tikhonov-2.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/output_noise-2.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/input_noise-1.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/tikhonov-1.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/output_noise-1.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/input_noise-1.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/tikhonov-1.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{images/output_noise-1.pdf}
+    \caption{Acceleration vs. Time When dropped from the 2nd floor.}
+    \label{fig:my_label}
+\end{figure}
+
+% If we assume that the noise has zero mean and is uncorrelated between different inputs, we see that
+% $$
+% \widetilde{E}  = E + \eta^2E^R 
+% $$
+% where $E^R$ is 
+% $$
+%  \frac{1}{2} \int \int  \sum_k \sum_i \frac{\partial y_k}{\partial y_i}^2 + \frac{1}{2} y_k(x) - t_k \frac{\partial^2 y_k^2}{\partial x_i^2} p(t_k | x ) p(x) dx dt_k
+% $$
+
+
+\paragraph{Error Bounds}
+
+\paragraph{Convergence}
+
+\section{Toy Problem}
+To demonstrate the efficacy of this method on real problems, we first generated synthetic Gaussian data in two identical and independently distributed data along with $p$ dimensions, a training noise level of $\sigma_i$, and a testing noise level of $\sigma_o$
+\section{Gaussian Noise}
+\section{Advesarial Noise}
+\section{Real Data}
+
+\bibliographystyle{IEEEtran}
+\bibliography{bib}
+\end{document}
