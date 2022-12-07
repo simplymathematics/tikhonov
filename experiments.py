@@ -18,7 +18,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 def run_tikho_experiment(model, X_train, X_test, y_train, y_test):
     model = model.fit(X_train, y_train)
-    predictions = model.predict(X_train)
+    predictions = model.predict(X_train )
     score = model.score(y_train, predictions)
     loss = model.loss(X_train, y_train, model.coef_, model.intercept_)
     return score, loss

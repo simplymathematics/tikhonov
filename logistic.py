@@ -24,6 +24,8 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
         # Setting initial weights and bias to 0.
         w = np.zeros((n,1))
         b = np.zeros(1)
+        self.coef_ = w
+        self.intercept_ = b
         # Ensuring y is in the right shape.
         y = y.reshape(m,1)
         # Training the model.
@@ -37,6 +39,8 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
             if method == 'sgd':
                 w -= lr*dw
                 b -= lr*db
+                self.coef_ = w
+                self.intercept_ = b
             # Finding the loss.
             l = self.loss(y, self.sigmoid(np.dot(x, w) + b))
             if l > old_loss:
@@ -46,8 +50,7 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
             grad = (np.linalg.norm(dw) ** 2 + np.linalg.norm(db) ** 2) ** .5
             losses.append(l)
             grads.append(grad)
-        self.coef_ = w
-        self.intercept_ = b
+        
         return self
     
     def sigmoid(self, z):
@@ -72,7 +75,7 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
         :param y_hat: hypothesis/predictions.
         :return: weight gradient, bias gradient.
         """
-        y_hat = self.predict(x, weights, bias, proba = True)
+        y_hat = self.predict(x, proba = True)
         n = x.shape[0]
         # Gradient of loss w.r.t weights.
         dw = (1/n)*np.dot(x.T, (y_hat - y))
@@ -80,7 +83,7 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
         db = (1/n)*np.sum((y_hat - y)) 
         return dw, db
 
-    def predict(self, x:np.ndarray, w:np.ndarray, b:np.ndarray, proba:bool = False) -> np.ndarray:
+    def predict(self, x:np.ndarray, proba:bool = False) -> np.ndarray:
         """
         Predict the class of the input data.
         :param x: input data.
@@ -88,6 +91,8 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
         :param b: biases.
         :return: predictions.
         """
+        w = self.coef_
+        b = self.intercept_
         preds = self.sigmoid(np.dot(x, w) + b)
         if not proba:
             pred_classes = []
@@ -131,8 +136,8 @@ if __name__ == "__main__":
     w = model.coef_
     b = model.intercept_
     grad2 = model.gradient(X_train, y_train, w, b)
-    predictions = model.predict(X_test, w, b)
-    probas = model.predict(X_test, w, b, proba = True)
+    predictions = model.predict(X_test)
+    probas = model.predict(X_test, proba = True)
     score = model.score(y_test, predictions)
     loss = model.loss(y_test, probas)
     print(f"Test Accuracy: {score}, Test Loss: {loss}")
