@@ -8,5 +8,5 @@ tqdm
 # hydra
 # dvc
 yellowbrick
-autograd
 torch
+autograd

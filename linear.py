@@ -1,12 +1,10 @@
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification, make_blobs
 from sklearn.model_selection import train_test_split
-from autograd import elementwise_grad, grad, numpy as np
+from autograd import numpy as np
 from tqdm import tqdm
 from torch.autograd.functional import jacobian
 import torch
-from torchmetrics.classification import BinaryAccuracy, MulticlassAccuracy
-from autograd import jacobian as jacob2
 class LinearTikhonovClassifier():
     def __init__(self, scale):
         self.scale=scale
@@ -26,10 +24,9 @@ class LinearTikhonovClassifier():
             self.intercept_ = np.zeros(1)
             self.coef_ = torch.from_numpy(self.coef_).float()
             self.intercept_ = torch.from_numpy(self.intercept_).float()
-            assert isinstance(X, torch.Tensor), f"X must be a torch tensor. It is a {type(X)}"
-            assert isinstance(y, torch.Tensor), f"y must be a torch tensor. It is a {type(y)}"
+            
             assert isinstance(self.coef_, torch.Tensor), f"coef_ must be a torch tensor. It is a {type(self.coef_)}"
-            assert isinstance(self.intercept_, torch.Tensor), f"intercept_ must be a torch tensor. It is a {type(self.intercept_)}"
+            assert isinstance(self.intercept_, torch.Tensor), f"intercept_ must be a torch tensor. It is a {type(self.intercept_)}"            
         return self
     
     def loss(self, X, y, weights, bias):
@@ -61,6 +58,8 @@ class LinearTikhonovClassifier():
         self = self._setup(X, y)
         L_w = self.coef_ * 0.0
         L_b = 0
+        X = torch.tensor(X).float().requires_grad_(True)
+        y = torch.tensor(y).float().requires_grad_(True)
         for i in tqdm(range(epochs), desc = f"Training {self.__class__.__name__}", leave = False):
             L_w, L_b = self.gradient(X, y, self.coef_, self.intercept_)
             self.coef_ -= L_w * learning_rate
@@ -80,7 +79,6 @@ class LinearTikhonovClassifier():
                 print()
                 print(f"Epoch: {i}, Loss: {new_loss}, Learning Rate: {learning_rate}")
         print(f"Final Loss: {self.loss(X, y, self.coef_, self.intercept_)}")
-        print(f"Final Accuracy: {self.score(y, y_pred)}")
         print(f"Final Learning Rate: {learning_rate}")
         return self
     
@@ -95,6 +93,10 @@ if __name__ == "__main__":
     X = torch.from_numpy(X).float().requires_grad_(True)
     y = torch.from_numpy(y).float().requires_grad_(True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train = X_train.requires_grad_(True)
+    y_train = y_train.requires_grad_(True)
+    y_test = y_test.requires_grad_(True)
+    X_test = X_test.requires_grad_(True)
     model = LinearTikhonovClassifier(scale=0.0)
     model._setup(X_train, y_train)
     model = model.fit(X_train, y_train, learning_rate=1e-8, epochs=1000)

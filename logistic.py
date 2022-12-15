@@ -36,11 +36,8 @@ if __name__ == "__main__":
     w = model.coef_
     b = model.intercept_
     grad2 = model.gradient(X_train, y_train, w, b)
-    predictions = model.predict(X_test)
     probas = model.predict(X_test)
     score = model.score(y_test, predictions)
-    print(f"Test Accuracy: {score}")
     print(f"Test Log Loss: {log_loss(y_test, probas)}")
-    print(f"Train Accuracy: {model.score(y_train, model.predict(X_train))}")
     print(f"Train Log Loss: {log_loss(y_train, model.predict(X_train))}")
     

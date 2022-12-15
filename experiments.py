@@ -3,10 +3,9 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
-from autograd import numpy as np
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
-
+from autograd import numpy as np
 from linear import LinearTikhonovClassifier
 from logistic import LogisticTikhonovClassifier
 
@@ -56,9 +55,8 @@ if "__main__" == __name__:
         raise ValueError(f"Unknown model: {args.model}")
 
 
-    score, loss = run_tikho_experiment(model, X_train, X_test, y_train, y_test, epochs = 100)
-    print(f"Score: {score}, Loss: {loss}")
-    input("Press Enter to continue...")
+    # score, loss = run_tikho_experiment(model, X_train, X_test, y_train, y_test, epochs = 1)
+    # print(f"Score: {score}, Loss: {loss}")
 
     print("Experiment 1: Tikhonov regularization")
     scale_scores = []
