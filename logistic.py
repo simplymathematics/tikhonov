@@ -17,23 +17,30 @@ class LogisticTikhonovClassifier(LinearTikhonovClassifier):
         X_dot_weights = torch.matmul(X, weights) + bias
         return self.sigmoid(X_dot_weights)
 
-    
+    def score(self, y, y_pred):
+        if len(y_pred.shape) > 1 or len(y_pred.shape) > len(y.shape):
+            y_pred = torch.argmax(y_pred, dim=1)
+        if len(y.shape) > 1 or len(y.shape) > len(y_pred.shape):
+            y = torch.argmax(y, dim=1)
+        return accuracy_score(y, y_pred)
 
 if __name__ == "__main__":
     n_classes = 2
-    X, y = make_classification(n_samples=10000, n_classes=n_classes, n_features=5, n_informative=4, n_redundant=0, n_clusters_per_class=1, class_sep = 10)
+    X, y = make_classification(n_samples=1000, n_classes=n_classes, n_features=10, n_informative=9, n_redundant=0, n_clusters_per_class=1, class_sep = 10)
     # X, y = make_blobs(n_samples=10000, n_features=2, centers=2, cluster_std=10, random_state=40)
-    X = torch.from_numpy(X).float()
-    y = torch.from_numpy(y).float()
+    X = torch.from_numpy(X).float().requires_grad_(True)
+    y = torch.from_numpy(y).float().requires_grad_(True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     model = LogisticTikhonovClassifier(scale=0)
-    model = model.fit(X_train, y_train, learning_rate = 1e-8, epochs = 100)
+    model = model.fit(X_train, y_train, learning_rate = 1e-8, epochs = 1000)
     w = model.coef_
     b = model.intercept_
     grad2 = model.gradient(X_train, y_train, w, b)
     predictions = model.predict(X_test)
-    probas = model.predict(X_test, proba = True)
+    probas = model.predict(X_test)
     score = model.score(y_test, predictions)
-
     print(f"Test Accuracy: {score}")
+    print(f"Test Log Loss: {log_loss(y_test, probas)}")
+    print(f"Train Accuracy: {model.score(y_train, model.predict(X_train))}")
+    print(f"Train Log Loss: {log_loss(y_train, model.predict(X_train))}")
     

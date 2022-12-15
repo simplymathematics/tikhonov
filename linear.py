@@ -13,9 +13,9 @@ class LinearTikhonovClassifier():
     
     def predict(self, X, weights=None, bias=None):
         if weights is None:
-            weights = self.coef_
+            weights = self.coef_.requires_grad_(True)
         if bias is None:
-            bias = self.intercept_
+            bias = self.intercept_.requires_grad_(True)
         X_dot_weights = torch.matmul(X, weights) + bias
         return X_dot_weights
 
@@ -46,11 +46,15 @@ class LinearTikhonovClassifier():
     
     def gradient(self, X, y, weights, bias):
         result = jacobian(self.loss, (X, y, weights, bias))
-        # gradX = result[0]
-        # grady = result[1]
         gradw = result[2]
         gradb = result[3]
-        assert gradw.shape == weights.shape
+        # gradw = torch.tensor(torch.mean(self.scale * self.coef_ + torch.matmul(torch.matmul(self.coef_.T, X.T) + self.intercept_ - y, X), axis = 0))
+        # print(f"gradw shape: {gradw.shape}, weights shape: {self.coef_.shape}")
+        # input("Press Enter to Continue...")
+        # gradb = torch.mean(self.scale * torch.matmul(self.coef_.T, X.T) + self.intercept_ - y)
+        # print(f"gradb shape: {gradb.shape}, bias shape: {self.intercept_.shape}")
+        # input("Press Enter to Continue...")
+        assert gradw.shape == weights.shape, f"gradw shape: {gradw.shape}, weights shape: {weights.shape}"
         return (gradw, gradb)
     
     def fit(self, X, y, learning_rate = 1e-8, epochs = 1000, warm_start = False):
@@ -69,7 +73,7 @@ class LinearTikhonovClassifier():
                 print(f"old loss: {old_loss}, new loss: {new_loss}")
                 learning_rate = learning_rate / 2
                 print(f"Learning Rate: {learning_rate}")
-                input("Learning Rate Decreased. Press Enter to Continue...")
+                print("Learning Rate Decreased. Press Enter to Continue...")
             else:
                 old_loss = new_loss
             if i%100 == 0:
@@ -79,19 +83,21 @@ class LinearTikhonovClassifier():
         print(f"Final Accuracy: {self.score(y, y_pred)}")
         print(f"Final Learning Rate: {learning_rate}")
         return self
+    
+    
 
     
     
 
 if __name__ == "__main__":
     samples = 1000
-    X, y = make_classification(n_samples=samples, n_classes=2, n_features=10, n_informative=9, n_redundant=0, n_clusters_per_class=1, class_sep=10)
-    X = torch.from_numpy(X).float()
-    y = torch.from_numpy(y).float()
+    X, y = make_classification(n_samples=samples, n_classes=2, n_features=100, n_informative=98, n_redundant=0, n_clusters_per_class=1, class_sep=10)
+    X = torch.from_numpy(X).float().requires_grad_(True)
+    y = torch.from_numpy(y).float().requires_grad_(True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     model = LinearTikhonovClassifier(scale=0.0)
     model._setup(X_train, y_train)
-    model = model.fit(X_train, y_train, learning_rate=1e-4, epochs=1000)
+    model = model.fit(X_train, y_train, learning_rate=1e-8, epochs=1000)
     y_pred = model.predict(X_test, model.coef_, model.intercept_)
     train_loss = model.loss(X_train, y_train, model.coef_, model.intercept_)
     test_loss = model.loss(X_test, y_test, model.coef_, model.intercept_)
