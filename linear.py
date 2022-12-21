@@ -5,8 +5,6 @@ from autograd import elementwise_grad, grad, numpy as np
 from tqdm import tqdm
 from torch.autograd.functional import jacobian
 import torch
-from torchmetrics.classification import BinaryAccuracy, MulticlassAccuracy
-from autograd import jacobian as jacob2
 class LinearTikhonovClassifier():
     def __init__(self, scale):
         self.scale=scale

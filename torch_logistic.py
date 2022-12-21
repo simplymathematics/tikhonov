@@ -1,134 +1,78 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import torch
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
-from tqdm import tqdm
-from autograd import grad, jacobian
-sns.set_style("darkgrid")
+from torch_linear import LinearRegression
+from pathlib import Path
 
-
-
-
-class LogisticRegression(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, type = 'linear'):
-        super(LogisticRegression, self).__init__()
+class LogisticRegression(LinearRegression):
+    def __init__(self, input_dim, output_dim):
+        super(LogisticRegression, self).__init__(input_dim, output_dim, criterion='ce')
         self.linear = torch.nn.Linear(input_dim, output_dim)
-        
-    def forward(self, x):
-        outputs = torch.sigmoid(self.linear(x))
-        return outputs
-
-    def fit(self, X_train, y_train, epochs,  model, criterion, optimizer):
-        losses = []
-        losses_test = []
-        Iterations = []
-        iter = 0
-        for _ in tqdm(range(int(epochs)),desc='Training Epochs'):
-            x = X_train
-            labels = y_train
-            optimizer.zero_grad() # Setting our stored gradients equal to zero
-            outputs = model(X_train)
-            loss = criterion(torch.squeeze(outputs), labels) # [200,1] -squeeze-> [200]
-            weights = list(model.parameters())[0]
-            bias = list(model.parameters())[1]
-            # tikhonov_loss = self.tikhonov_loss(x, weights = weights, bias = bias)
-            loss.backward() # Computes the gradient of the given tensor w.r.t. graph leaves 
-
-            optimizer.step() # Updates weights and biases with the optimizer (SGD)
-            iter+=1
-            if iter%10000==0:
-                # calculate Accuracy
-                with torch.no_grad():
-                    # Calculating the loss and accuracy for the test dataset
-                    correct_test = 0
-                    total_test = 0
-                    outputs_test = torch.squeeze(model(X_test))
-                    loss_test = criterion(outputs_test, y_test)
-                    
-                    predicted_test = outputs_test.round().detach().numpy()
-                    total_test += y_test.size(0)
-                    correct_test += np.sum(predicted_test == y_test.detach().numpy())
-                    accuracy_test = 100 * correct_test/total_test
-                    losses_test.append(loss_test.item())
-                    
-                    # Calculating the loss and accuracy for the train dataset
-                    total = 0
-                    correct = 0
-                    total += y_train.size(0)
-                    correct += np.sum(torch.squeeze(outputs).round().detach().numpy() == y_train.detach().numpy())
-                    accuracy = 100 * correct/total
-                    losses.append(loss.item())
-                    
-                    
-                    # Calculating the loss and accuracy for the test dataset
-                    total = 0
-                    correct = 0
-                    total += y_test.size(0)
-                    correct += np.sum(torch.squeeze(outputs_test).round().detach().numpy() == y_test.detach().numpy())
-                    accuracy = 100 * correct/total
-                    losses.append(loss.item())
-                    
-                    
-                    Iterations.append(iter)
-                    print(f"Iteration: {iter}. \nTest - Loss: {loss_test.item()}. Accuracy: {accuracy_test}")
-                    print(f"Train -  Loss: {loss.item()}. Accuracy: {accuracy}\n")
-        return losses, losses_test, Iterations
     
-    def predict(self, X_test, y_test):
-        with torch.no_grad():
-            # Calculating the loss and accuracy for the test dataset
-            correct_test = 0
-            total_test = 0
-            outputs_test = torch.squeeze(model(X_test))
-            loss_test = criterion(outputs_test, y_test)
-            
-            predicted_test = outputs_test.round().detach().numpy()
-            total_test += y_test.size(0)
-            correct_test += np.sum(predicted_test == y_test.detach().numpy())
-            accuracy_test = 100 * correct_test/total_test
-            
-            print(f"Test - Loss: {loss_test.item()}. Accuracy: {accuracy_test}")
-
+    def predict(self, X_test):
+        outputs_test = torch.squeeze(self(X_test))
+        return torch.sigmoid(outputs_test)    
+    
+    def score(self, X_test, y_test):
+        # Calculate CE loss
+        y_pred = self.predict(X_test)
+        loss = torch.nn.CrossEntropyLoss()
+        print(f"Loss: {loss(y_pred, y_test)}")
+        y_pred = (y_pred > 0.5).float()
+        accuracy = torch.mean((y_pred == y_test).float())
+        print(f"Accuracy: {accuracy.item()}")
+        return accuracy
+        
 
 if __name__ == "__main__":
     import argparse
+    import gc
+    import sys
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=1000)
-    parser.add_argument('--lr', type=float, default=0.01)
-    parser.add_argument('--scale', type=float, default=0.01)
-    args = parser.parse_args()
-    separable = False
-    while not separable:
-        samples = make_classification(n_samples=1000, n_features=2, n_redundant=0, n_informative=1, n_clusters_per_class=1, flip_y=-1)
-        red = samples[0][samples[1] == 0]
-        blue = samples[0][samples[1] == 1]
-        separable = any([red[:, k].max() < blue[:, k].min() or red[:, k].min() > blue[:, k].max() for k in range(2)])
+    parser.add_argument('--lr', type=float, default=1)
+    parser.add_argument('--scale', type=float, default=0.00)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--test_size", type=float, default=0.2)
+    model_args = parser.parse_args()    
+    sample_args = argparse.Namespace(test_size = model_args.test_size, random_state = model_args.seed)
+    random_state  = np.random.RandomState(model_args.seed)
+    torch.manual_seed(model_args.seed)
+    files = Path('data/').glob('*.npz')
+    for file_ in files:
+        device = 'cpu' if not torch.cuda.is_available() else 'cuda'
+        data = np.load(file_)
+        inputs, labels = data['X'], data['y']
+        X_train, X_test, y_train,  y_test = train_test_split(
+            inputs, labels, test_size=sample_args.test_size, random_state=random_state, stratify = labels)
+        print("Data split into train and test sets")
+        X_train = torch.Tensor(X_train).to(device)
+        X_test = torch.Tensor(X_test).to(device)
+        y_train = torch.squeeze(torch.Tensor(y_train).to(device))
+        y_test = torch.squeeze(torch.Tensor(y_test).to(device))
+        
+        
+        
+        device = 'cpu' if not torch.cuda.is_available() else 'cuda'
+        print("Using device: ", device, " for training.")
+        print("with args: ", model_args)
+        epochs = model_args.epochs
+        input_dim = X_train.shape[1]
+        output_dim = 1
+        learning_rate = model_args.lr
 
-
-    red_labels = np.zeros(len(red))
-    blue_labels = np.ones(len(blue))
-
-    labels = np.append(red_labels,blue_labels)
-    inputs = np.concatenate((red,blue),axis=0)
-
-    X_train, X_test, y_train,  y_test = train_test_split(
-        inputs, labels, test_size=0.33, random_state=42)
-
-    epochs = args.epochs
-    input_dim = X_train.shape[1]
-    output_dim = len(np.unique(y_train)) - 1
-    learning_rate = args.lr
-
-    model = LogisticRegression(input_dim,output_dim)
-
-    criterion = torch.nn.BCELoss()
-
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
-
-    X_train, X_test = torch.Tensor(X_train),torch.Tensor(X_test)
-    y_train, y_test = torch.Tensor(y_train),torch.Tensor(y_test)
-
-    model.fit(X_train, y_train, epochs, model, criterion, optimizer)
-    predictions = model.predict(X_test, y_test)
+        model = LogisticRegression(input_dim,output_dim).to(device)
+        print("Model created")
+        X_train, X_test = torch.Tensor(X_train),torch.Tensor(X_test)
+        y_train, y_test = torch.Tensor(y_train),torch.Tensor(y_test)
+        print("Training model...")
+        model.fit(X_train, y_train, epochs, learning_rate,)
+        print("Model trained!")
+        print("Testing model...")
+        score = model.score(X_test, y_test)
+        print("Model tested!")
+        torch.cuda.empty_cache()
+        gc.collect()
+    sys.exit(0) 
+    
